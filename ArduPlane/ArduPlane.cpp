@@ -491,7 +491,7 @@ void Plane::update_navigation()
     case Mode::Number::LOITER:
     case Mode::Number::AVOID_ADSB:
     case Mode::Number::GUIDED:
-    case Mode::Number::TAKEOFF:
+	case Mode::Number::UPWIND:
         update_loiter(radius);
         break;
 
@@ -515,6 +515,7 @@ void Plane::update_navigation()
     case Mode::Number::QRTL:
     case Mode::Number::QAUTOTUNE:
     case Mode::Number::QACRO:
+	
         // nothing to do
         break;
     }
@@ -618,7 +619,7 @@ void Plane::update_flight_stage(void)
             } else {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_NORMAL);
             }
-        } else if (control_mode != &mode_takeoff) {
+        } else {
             // If not in AUTO then assume normal operation for normal TECS operation.
             // This prevents TECS from being stuck in the wrong stage if you switch from
             // AUTO to, say, FBWB during a landing, an aborted landing or takeoff.

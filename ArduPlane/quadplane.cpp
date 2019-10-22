@@ -707,7 +707,7 @@ bool QuadPlane::setup(void)
     pos_control->set_dt(loop_delta_t);
     attitude_control->parameter_sanity_check();
 
-    // setup the trim of any motors used by AP_Motors so I/O board
+    // setup the trim of any motors used by AP_Motors so px4io
     // failsafe will disable motors
     for (uint8_t i=0; i<8; i++) {
         SRV_Channel::Aux_servo_function_t func = SRV_Channels::get_motor_function(i);
@@ -1885,18 +1885,9 @@ void QuadPlane::motors_output(bool run_rate_controller)
     
     motors->output();
     if (motors->armed() && motors->get_spool_state() != AP_Motors::SpoolState::SHUT_DOWN) {
-        const uint32_t now = AP_HAL::millis();
-
-        // log RATE at main loop rate
         plane.logger.Write_Rate(ahrs_view, *motors, *attitude_control, *pos_control);
-
-        // log QTUN at 25 Hz
-        if (now - last_qtun_log_ms > 40) {
-            last_qtun_log_ms = now;
-            Log_Write_QControl_Tuning();
-        }
-
-        // log CTRL at 10 Hz
+        Log_Write_QControl_Tuning();
+        const uint32_t now = AP_HAL::millis();
         if (now - last_ctrl_log_ms > 100) {
             last_ctrl_log_ms = now;
             attitude_control->control_monitor_log();

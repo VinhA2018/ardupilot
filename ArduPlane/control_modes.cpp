@@ -40,6 +40,9 @@ Mode *Plane::mode_from_mode_num(const enum Mode::Number num)
     case Mode::Number::LOITER:
         ret = &mode_loiter;
         break;
+	case Mode::Number::UPWIND:
+        ret = &mode_upwind;
+        break;
     case Mode::Number::AVOID_ADSB:
         ret = &mode_avoidADSB;
         break;
@@ -70,9 +73,7 @@ Mode *Plane::mode_from_mode_num(const enum Mode::Number num)
     case Mode::Number::QAUTOTUNE:
         ret = &mode_qautotune;
         break;
-    case Mode::Number::TAKEOFF:
-        ret = &mode_takeoff;
-        break;
+	
     }
     return ret;
 }

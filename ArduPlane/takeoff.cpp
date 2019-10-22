@@ -169,8 +169,7 @@ void Plane::takeoff_calc_pitch(void)
     }
 
     if (aparm.stall_prevention != 0) {
-        if (mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF ||
-            control_mode == &mode_takeoff) {
+        if (mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF) {
             // during takeoff we want to prioritise roll control over
             // pitch. Apply a reduction in pitch demand if our roll is
             // significantly off. The aim of this change is to

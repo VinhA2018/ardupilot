@@ -82,9 +82,8 @@ bool Plane::suppress_throttle(void)
 
     bool gps_movement = (gps.status() >= AP_GPS::GPS_OK_FIX_2D && gps.ground_speed() >= 5);
     
-    if ((control_mode == &mode_auto &&
-         auto_state.takeoff_complete == false) ||
-        control_mode == &mode_takeoff) {
+    if (control_mode == &mode_auto &&
+        auto_state.takeoff_complete == false) {
 
         uint32_t launch_duration_ms = ((int32_t)g.takeoff_throttle_delay)*100 + 2000;
         if (is_flying() &&

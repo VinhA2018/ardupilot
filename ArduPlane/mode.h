@@ -1,7 +1,5 @@
 #pragma once
 
-#include <AP_Param/AP_Param.h>
-#include <AP_Common/Location.h>
 #include <stdint.h>
 
 class Mode
@@ -24,10 +22,9 @@ public:
         FLY_BY_WIRE_B = 6,
         CRUISE        = 7,
         AUTOTUNE      = 8,
-        AUTO          = 10,
+        UPWIND	      = 9,
         RTL           = 11,
         LOITER        = 12,
-        TAKEOFF       = 13,
         AVOID_ADSB    = 14,
         GUIDED        = 15,
         INITIALISING  = 16,
@@ -38,6 +35,7 @@ public:
         QRTL          = 21,
         QAUTOTUNE     = 22,
         QACRO         = 23,
+		AUTO          = 24,
     };
 
     // Constructor
@@ -110,7 +108,6 @@ protected:
     bool _enter() override;
     void _exit() override;
 };
-
 
 class ModeAutoTune : public Mode
 {
@@ -193,7 +190,6 @@ protected:
     bool _enter() override;
     void _exit() override;
 };
-
 
 class ModeRTL : public Mode
 {
@@ -453,30 +449,18 @@ protected:
     void _exit() override;
 };
 
-
-class ModeTakeoff: public Mode
+class ModeUpwind : public Mode
 {
 public:
-    ModeTakeoff();
 
-    Number mode_number() const override { return Number::TAKEOFF; }
-    const char *name() const override { return "TAKEOFF"; }
-    const char *name4() const override { return "TKOF"; }
+    Number mode_number() const override { return Number::UPWIND; }
+    const char *name() const override { return "UPWIND"; }
+    const char *name4() const override { return "UPWD"; }
 
     // methods that affect movement of the vehicle in this mode
     void update() override;
 
-    // var_info for holding parameter information
-    static const struct AP_Param::GroupInfo var_info[];
-    
 protected:
-    AP_Int16 target_alt;
-    AP_Int16 target_dist;
-    AP_Int16 level_alt;
-    AP_Int8 level_pitch;
-
-    bool takeoff_started;
-    Location start_loc;
 
     bool _enter() override;
 };
