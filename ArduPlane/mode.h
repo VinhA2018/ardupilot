@@ -38,6 +38,7 @@ public:
         QRTL          = 21,
         QAUTOTUNE     = 22,
         QACRO         = 23,
+		UPWIND 		  = 24,  //new mode for the upwind project » flying 8 figure
     };
 
     // Constructor
@@ -477,6 +478,22 @@ protected:
 
     bool takeoff_started;
     Location start_loc;
+
+    bool _enter() override;
+};
+
+class ModeUpwind : public Mode
+{
+public:
+
+    Number mode_number() const override { return Number::UPWIND; }
+    const char *name() const override { return "UPWIND"; }
+    const char *name4() const override { return "UPWD"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+protected:
 
     bool _enter() override;
 };
