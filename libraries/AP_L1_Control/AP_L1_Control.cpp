@@ -441,6 +441,11 @@ void AP_L1_Control::update_loiter(const struct Location &center_WP, float radius
     _data_is_stale = false; // status are correctly updated with current waypoint data
 }
 
+// update L1 control for fly8 figure
+void AP_L1_Control::update_fly8()
+{
+    
+}
 
 // update L1 control for heading hold navigation
 void AP_L1_Control::update_heading_hold(int32_t navigation_heading_cd)

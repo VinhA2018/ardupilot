@@ -255,6 +255,11 @@ void Plane::update_loiter(uint16_t radius)
     }
 }
 
+void Plane::update_fly8()
+{
+   
+}
+
 /*
   handle CRUISE mode, locking heading to GPS course when we have
   sufficient ground speed, and no aileron or rudder input

@@ -492,9 +492,12 @@ void Plane::update_navigation()
     case Mode::Number::AVOID_ADSB:
     case Mode::Number::GUIDED:
     case Mode::Number::TAKEOFF:
-	case Mode::Number::UPWIND:
         update_loiter(radius);
         break;
+		
+	case Mode::Number::UPWIND:
+		update_fly8();
+		break;
 
     case Mode::Number::CRUISE:
         update_cruise();

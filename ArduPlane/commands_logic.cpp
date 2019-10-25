@@ -895,6 +895,16 @@ void Plane::do_loiter_at_location()
     next_WP_loc = current_loc;
 }
 
+void Plane::do_fly8()
+{
+    if (aparm.loiter_radius < 0) {
+        loiter.direction = -1;
+    } else {
+        loiter.direction = 1;
+    }
+    next_WP_loc = current_loc;
+}
+
 void Plane::do_change_speed(const AP_Mission::Mission_Command& cmd)
 {
     switch (cmd.content.speed.speed_type)
