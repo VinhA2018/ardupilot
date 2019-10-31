@@ -3,10 +3,11 @@
 
 bool ModeUpwind::_enter()
 {
+    hal.console->println("Initialization of UPWING mode");
     plane.throttle_allows_nudging = true;
     plane.auto_throttle_mode = true;
     plane.auto_navigation_mode = true;
-    plane.do_fly8();
+    plane.do_eight_sphere();
 
     return true;
 }
