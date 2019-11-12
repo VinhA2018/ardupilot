@@ -194,6 +194,7 @@ void AP_L1_Control::_prevent_indecision(float &Nu)
     }
 }
 
+/*
 // update L1 control for waypoint navigation
 void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min)
 {
@@ -213,6 +214,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     // Calculate L1 gain required for specified damping
     float K_L1 = 4.0f * _L1_damping * _L1_damping;
+    hal.console->printf("K1: %2f\n", K_L1);
 
     // Get current position and velocity
     if (_ahrs.get_position(_current_loc) == false) {
@@ -239,6 +241,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     // Calculate the L1 length required for specified period
     // 0.3183099 = 1/1/pipi
     _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+    hal.console->printf("L1 dist: %2f\n", _L1_dist);
 
     // Calculate the NE position of WP B relative to WP A
     Vector2f AB = prev_WP.get_distance_NE(next_WP);
@@ -261,20 +264,22 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     _crosstrack_error = A_air % AB;
 
     //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
-    //and further than L1 distance from WP A. Then use WP A as the L1 reference point
+    //and further than L1 distance from WP A. Then use WP A as the L1 reference poin
+    
     //Otherwise do normal L1 guidance
     float WP_A_dist = A_air.length();
     float alongTrackDist = A_air * AB;
-    if (WP_A_dist > _L1_dist && alongTrackDist/MAX(WP_A_dist, 1.0f) < -0.7071f)
+    if (WP_A_dist > _L1_dist && alongTrackDist/MAX(WP_A_dist, 1.0f) < -0.7071f)                             //Aircraft behind first waypoint
     {
+        hal.console->println("IF n1");
         //Calc Nu to fly To WP A
         Vector2f A_air_unit = (A_air).normalized(); // Unit vector from WP A to aircraft
         xtrackVel = _groundspeed_vector % (-A_air_unit); // Velocity across line
         ltrackVel = _groundspeed_vector * (-A_air_unit); // Velocity along line
         Nu = atan2f(xtrackVel,ltrackVel);
         _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
-    } else if (alongTrackDist > AB_length + groundSpeed*3) {
-        // we have passed point B by 3 seconds. Head towards B
+    } else if (alongTrackDist > AB_length + groundSpeed*3) {    
+        hal.console->println("IF n2");                                                                                                    // we have passed point B by 3 seconds. Head towards B
         // Calc Nu to fly To WP B
         const Vector2f B_air = next_WP.get_distance_NE(_current_loc);
         Vector2f B_air_unit = (B_air).normalized(); // Unit vector from WP B to aircraft
@@ -282,8 +287,10 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         ltrackVel = _groundspeed_vector * (-B_air_unit); // Velocity along line
         Nu = atan2f(xtrackVel,ltrackVel);
         _nav_bearing = atan2f(-B_air_unit.y , -B_air_unit.x); // bearing (radians) from AC to L1 point
-    } else { //Calc Nu to fly along AB line
+    } else {                                                                                                //Calc Nu to fly along AB line
 
+        hal.console->println("IF n3");
+        hal.console->printf("CrossTrackError: %2f\n", _crosstrack_error);
         //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)
         xtrackVel = _groundspeed_vector % AB; // Velocity cross track
         ltrackVel = _groundspeed_vector * AB; // Velocity along track
@@ -294,6 +301,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         sine_Nu1 = constrain_float(sine_Nu1, -0.7071f, 0.7071f);
         float Nu1 = asinf(sine_Nu1);
 
+       
         // compute integral error component to converge to a crosstrack of zero when traveling
         // straight but reset it when disabled or if it changes. That allows for much easier
         // tuning by having it re-converge each time it changes.
@@ -306,7 +314,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
             // an AHRS_TRIM_X=0.1 will drift to about 0.08 so 0.1 is a good worst-case to clip at
             _L1_xtrack_i = constrain_float(_L1_xtrack_i, -0.1f, 0.1f);
         }
-
+       
         // to converge to zero we must push Nu1 harder
         Nu1 += _L1_xtrack_i;
 
@@ -328,6 +336,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     _data_is_stale = false; // status are correctly updated with current waypoint data
 }
+*/
 
 // update L1 control for loitering
 void AP_L1_Control::update_loiter(const struct Location &center_WP, float radius, int8_t loiter_direction)
@@ -441,6 +450,242 @@ void AP_L1_Control::update_loiter(const struct Location &center_WP, float radius
     _data_is_stale = false; // status are correctly updated with current waypoint data
 }
 
+
+// update L control for waypoint navigation - UPWIND project
+void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct Location &next_WP, float dist_min)
+{
+
+    
+    struct Location _current_loc;
+    float Nu;
+    float xtrackVel;
+    float ltrackVel;
+
+    uint32_t now = AP_HAL::micros();
+    float dt = (now - _last_update_waypoint_us) * 1.0e-6f;
+    if (dt > 0.1) {
+        dt = 0.1;
+        _L1_xtrack_i = 0.0f;
+    }
+    _last_update_waypoint_us = now;
+
+    // Calculate L1 gain required for specified damping
+    //float K_L1 = 4.0f * _L1_damping * _L1_damping;
+
+    // Get current position and velocity
+    if (_ahrs.get_position(_current_loc) == false) {
+        // if no GPS loc available, maintain last nav/target_bearing
+        _data_is_stale = true;
+        return;
+    }
+
+    Vector2f _groundspeed_vector = _ahrs.groundspeed_vector();
+
+    // update _target_bearing_cd
+    _target_bearing_cd = _current_loc.get_bearing_to(next_WP);
+
+    //Calculate groundspeed
+    float groundSpeed = _groundspeed_vector.length();
+    if (groundSpeed < 0.1f) {
+        // use a small ground speed vector in the right direction,
+        // allowing us to use the compass heading at zero GPS velocity
+        groundSpeed = 0.1f;
+        _groundspeed_vector = Vector2f(cosf(get_yaw()), sinf(get_yaw())) * groundSpeed;
+    }
+
+    // Calculate time varying control parameters
+    // Calculate the L1 length required for specified period
+    // 0.3183099 = 1/1/pipi
+    //_L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+
+    // Calculate the NE position of WP B relative to WP A
+    Vector2f AB = prev_WP.get_distance_NE(next_WP);
+    //float AB_length = AB.length();
+
+    // Check for AB zero length and track directly to the destination
+    // if too small
+    if (AB.length() < 1.0e-6f) {
+        AB = _current_loc.get_distance_NE(next_WP);
+        if (AB.length() < 1.0e-6f) {
+            AB = Vector2f(cosf(get_yaw()), sinf(get_yaw()));
+        }
+    }
+    AB.normalize();
+
+    // Calculate the NE position of the aircraft relative to WP A
+    const Vector2f A_air = prev_WP.get_distance_NE(_current_loc);
+
+    // calculate distance to target track, for reporting
+    _crosstrack_error = A_air % AB;
+    
+    float L = 50.0f;
+    _L1_dist = sqrt(sq(L)+sq(_crosstrack_error));
+
+    hal.console->printf("L1 dist: %2f\n", _L1_dist);
+   
+   
+    //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
+    //and further than L1 distance from WP A. Then use WP A as the L1 reference poin
+    
+    //Otherwise do normal L1 guidance
+    //float WP_A_dist = A_air.length();
+    //float alongTrackDist = A_air * AB;
+    
+    //hal.console->printf("AlongTrackDist:: %2f\n", alongTrackDist);
+
+                                                                                                      //Calc Nu to fly along AB line
+      
+    hal.console->printf("CrossTrackError: %2f\n", _crosstrack_error);
+    //Calculate Nu2 angle (angle of velocity vector relative to line connecting waypoints)
+    xtrackVel = _groundspeed_vector % AB; // Velocity cross track
+    ltrackVel = _groundspeed_vector * AB; // Velocity along track
+    float Nu2 = atan2f(xtrackVel,ltrackVel);  
+    //Calculate Nu1 angle (Angle to L1 reference point)
+    float sine_Nu1 = _crosstrack_error/MAX(_L1_dist, 0.1f);
+    //Limit sine of Nu1 to provide a controlled track capture angle of 45 deg
+    sine_Nu1 = constrain_float(sine_Nu1, -0.7071f, 0.7071f);
+    float Nu1 = asinf(sine_Nu1);
+    Nu = Nu1 + Nu2;
+    _nav_bearing = atan2f(AB.y, AB.x) + Nu1; // bearing (radians) from AC to L1 point
+    
+
+    _prevent_indecision(Nu);
+    _last_Nu = Nu;
+
+    //Limit Nu to +-(pi/2)
+    Nu = constrain_float(Nu, -1.5708f, +1.5708f);
+    _latAccDem = 2.0f * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
+
+    // Waypoint capture status is always false during waypoint following
+    _WPcircle = false;
+
+    _bearing_error = Nu; // bearing error angle (radians), +ve to left of track
+
+    _data_is_stale = false; // status are correctly updated with current waypoint data
+}
+
+
+/*
+// update L control for loitering - UPWIND project
+void AP_L1_Control::update_loiter(const struct Location &center_WP, float radius, int8_t loiter_direction)
+{
+    struct Location _current_loc;
+
+    // scale loiter radius with square of EAS2TAS to allow us to stay
+    // stable at high altitude
+    radius = loiter_radius(fabsf(radius));
+
+    // Calculate guidance gains used by PD loop (used during circle tracking)
+    //float omega = (6.2832f / _L1_period);
+    //float Kx = omega * omega;
+    //float Kv = 2.0f * _L1_damping * omega;
+
+    // Calculate L1 gain required for specified damping (used during waypoint capture)
+    //float K_L1 = 4.0f * _L1_damping * _L1_damping;
+
+    //Get current position and velocity
+    if (_ahrs.get_position(_current_loc) == false) {
+        // if no GPS loc available, maintain last nav/target_bearing
+        _data_is_stale = true;
+        return;
+    }
+
+    Vector2f _groundspeed_vector = _ahrs.groundspeed_vector();
+
+    //Calculate groundspeed
+    float groundSpeed = MAX(_groundspeed_vector.length() , 1.0f);
+
+
+    // update _target_bearing_cd
+    _target_bearing_cd = _current_loc.get_bearing_to(center_WP);
+
+
+    // Calculate time varying control parameters
+    // Calculate the L1 length required for specified period
+    // 0.3183099 = 1/pi
+    // _L1_dist = 0.3183099f * _L1_damping * _L1_period * groundSpeed;
+
+    //Calculate the NE position of the aircraft relative to WP A
+    const Vector2f A_air = center_WP.get_distance_NE(_current_loc);
+
+    // Calculate the unit vector from WP A to aircraft
+    // protect against being on the waypoint and having zero velocity
+    // if too close to the waypoint, use the velocity vector
+    // if the velocity vector is too small, use the heading vector
+    Vector2f A_air_unit;
+    if (A_air.length() > 0.1f) {
+        A_air_unit = A_air.normalized();
+    } else {
+        if (_groundspeed_vector.length() < 0.1f) {
+            A_air_unit = Vector2f(cosf(_ahrs.yaw), sinf(_ahrs.yaw));
+        } else {
+            A_air_unit = _groundspeed_vector.normalized();
+        }
+    }
+
+    //Calculate Nu to capture center_WP
+    float xtrackVelCap = A_air_unit % _groundspeed_vector; // Velocity across line - perpendicular to radial inbound to WP
+    float ltrackVelCap = - (_groundspeed_vector * A_air_unit); // Velocity along line - radial inbound to WP
+    float Nu = atan2f(xtrackVelCap,ltrackVelCap);
+
+    _prevent_indecision(Nu);
+    _last_Nu = Nu;
+
+    Nu = constrain_float(Nu, -M_PI_2, M_PI_2); //Limit Nu to +- Pi/2
+
+    //Calculate radial position and velocity errors
+    //float xtrackVelCirc = -ltrackVelCap; // Radial outbound velocity - reuse previous radial inbound velocity
+    float xtrackErrCirc = A_air.length() - radius; // Radial distance from the loiter circle
+
+    // keep crosstrack error for reporting
+    _crosstrack_error = xtrackErrCirc;
+
+    float L = 4.0f;
+    //Calculate L1 using L=const and crosstrack error
+    _L1_dist = sqrt(sq(L)+sq(_crosstrack_error));
+
+
+    //Calculate lat accln demand to capture center_WP (use L1 guidance law)
+    float latAccDemCap = 2.0f * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
+    
+
+    //Calculate PD control correction to circle waypoint_ahrs.roll
+    //float latAccDemCircPD = (xtrackErrCirc * Kx + xtrackVelCirc * Kv);
+
+    //Calculate tangential velocity
+    float velTangent = xtrackVelCap * float(loiter_direction);
+
+    //Prevent PD demand from turning the wrong way by limiting the command when flying the wrong way
+    //if (ltrackVelCap < 0.0f && velTangent < 0.0f) {
+    //    latAccDemCircPD =  MAX(latAccDemCircPD, 0.0f);
+    //}
+
+    // Calculate centripetal acceleration demand
+    float latAccDemCircCtr = velTangent * velTangent / MAX((0.5f * radius), (radius + xtrackErrCirc));
+
+    //Sum PD control and centripetal acceleration to calculate lateral manoeuvre demand
+    //float latAccDemCirc = loiter_direction * (latAccDemCircPD + latAccDemCircCtr);
+    float latAccDemCirc = loiter_direction * latAccDemCircCtr;
+
+    // Perform switchover between 'capture' and 'circle' modes at the
+    // point where the commands cross over to achieve a seamless transfer
+    // Only fly 'capture' mode if outside the circle
+    if (xtrackErrCirc > 0.0f && loiter_direction * latAccDemCap < loiter_direction * latAccDemCirc) {
+        _latAccDem = latAccDemCap;
+        _WPcircle = false;
+        _bearing_error = Nu; // angle between demanded and achieved velocity vector, +ve to left of track
+        _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians) from AC to L1 point
+    } else {
+        _latAccDem = latAccDemCirc;
+        _WPcircle = true;
+        _bearing_error = 0.0f; // bearing error (radians), +ve to left of track
+        _nav_bearing = atan2f(-A_air_unit.y , -A_air_unit.x); // bearing (radians)from AC to L1 point
+    }
+
+    _data_is_stale = false; // status are correctly updated with current waypoint data
+}
+*/
+
 // update L1 control for fly8 figure
 void AP_L1_Control::update_loiter_3d(const struct Location &S2center, const Vector3f &ercv, int32_t S2radius, const float &theta_r, int8_t orientation, struct Location &aircraft_loc, Vector3f &aircraft_vel, struct Location &desired_loc)
 {
@@ -495,20 +740,22 @@ void AP_L1_Control::update_loiter_3d(const struct Location &S2center, const Vect
       start_loc.alt = start_loc.alt + heightmin_cm;
       struct Location end_loc = S1center;
       end_loc.offset(maxv.x, maxv.y);
-      
+
+     /* 
       end_loc.alt = end_loc.alt + heightmin_cm;
-//      hal.console->print("start_loc: ");
-//      hal.console->print(start_loc.lat);
-//      hal.console->print(", ");
-//      hal.console->print(start_loc.lng);
-//      hal.console->print(", ");
-//      hal.console->println(start_loc.alt);
-//      hal.console->print("end_loc: ");
-//      hal.console->print(end_loc.lat);
-//      hal.console->print(", ");
-//      hal.console->print(end_loc.lng);
-//      hal.console->print(", ");
-//      hal.console->println(end_loc.alt);
+      hal.console->print("start_loc: ");
+      hal.console->print(start_loc.lat);
+      hal.console->print(", ");
+      hal.console->print(start_loc.lng);
+      hal.console->print(", ");
+      hal.console->println(start_loc.alt);
+      hal.console->print("end_loc: ");
+      hal.console->print(end_loc.lat);
+      hal.console->print(", ");
+      hal.console->print(end_loc.lng);
+      hal.console->print(", ");
+      hal.console->println(end_loc.alt);
+    */
 
 // GET CURRENT POSITON AND VELOCITY
      // current location of the aircraft
@@ -523,14 +770,14 @@ void AP_L1_Control::update_loiter_3d(const struct Location &S2center, const Vect
     // store aircraft's position for external use
     aircraft_loc = _current_loc;
     // aircraft's position vector (direction of ideal (straight) tether) from the center of the sphere
-    // Vector3f S2ctoav = S2center.get_distance_NED(_current_loc);
-//    hal.console->print("S2ctoav: ");
-//    hal.console->print(S2ctoav.x);
-//    hal.console->print(", ");
-//    hal.console->print(S2ctoav.y);
-//    hal.console->print(", ");
-//    hal.console->println(S2ctoav.z);
-
+    /*Vector3f S2ctoav = S2center.get_distance_NED(_current_loc);
+    hal.console->print("S2ctoav: ");
+    hal.console->print(S2ctoav.x);
+    hal.console->print(", ");
+    hal.console->print(S2ctoav.y);
+    hal.console->print(", ");
+    hal.console->println(S2ctoav.z);
+    */
 
     // aircraft's position vector from the center of the circle
     Vector3f S1ctoav = S1center.get_distance_NED(_current_loc);

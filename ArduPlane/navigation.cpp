@@ -476,7 +476,7 @@ void Plane::update_eight_sphere() {
         // switch from first to second segment in the quadrant if
         //_current_segment = eight_in_S2.firstsegments[eight_in_S2.current_quadrant];
         if ((eight_in_S2.in_initial_quadrant || eight_in_S2.entered_next_quadrant) && eight_in_S2.switch_to_2nd_segment_in_quadrant){
-            hal.console->println("entering second segment of current quadrant.");
+            // hal.console->println("entering second segment of current quadrant.");
             // aircraft is in the first quadrant where figure-eight pattern is initialized or aircraft has entered next quadrant and switching to second segment is required
             // switch to second segment of the current quadrant
             _current_segment = eight_in_S2.secondsegments[eight_in_S2.current_quadrant];
