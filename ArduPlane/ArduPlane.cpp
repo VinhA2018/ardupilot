@@ -499,6 +499,10 @@ void Plane::update_navigation()
 		update_eight_sphere();
 		break;
 
+    case Mode::Number::NAVIGATE:
+        update_zero_plane();
+        break;    
+
     case Mode::Number::CRUISE:
         update_cruise();
         break;

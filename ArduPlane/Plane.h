@@ -157,6 +157,7 @@ public:
     friend class ModeQAutotune;
     friend class ModeTakeoff;
 	friend class ModeUpwind;
+    friend class ModeNavigate;
 
     Plane(void);
 
@@ -292,6 +293,7 @@ private:
     ModeQAutotune mode_qautotune;
     ModeTakeoff mode_takeoff;
 	ModeUpwind mode_upwind;
+    ModeNavigate mode_navigate;
 
     // This is the state of the flight control system
     // There are multiple states defined such as MANUAL, FBW-A, AUTO
@@ -1336,6 +1338,8 @@ private:
     void do_eight_sphere();
     void update_eight_sphere();
     void update_loiter_3d();
+    void update_zero_plane();
+    void do_zero_plane();
 
 #if PARACHUTE == ENABLED
     void do_parachute(const AP_Mission::Mission_Command& cmd);

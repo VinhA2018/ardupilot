@@ -255,6 +255,71 @@ void Plane::update_loiter(uint16_t radius)
     }
 }
 
+void Plane::update_zero_plane()
+{
+    eight_in_R2.set_current_segment(eight_in_R2.aircraft_loc, eight_in_R2.aircraft_vel);
+
+    Vector3f rav =  location_3d_diff_NED(eight_in_R2.center_loc, eight_in_R2.aircraft_loc);
+    Vector3f _rxaplanev = rav - eight_in_R2.erxv * (eight_in_R2.erxv * rav);
+    int8_t _current_quadrant;
+    // north or south
+    if (_rxaplanev * eight_in_R2.ethetaxv >= 0) {_current_quadrant = -2;} else {_current_quadrant = -1;}
+    // east or west
+    if (_rxaplanev * eight_in_R2.epsixv >= 0) {_current_quadrant = _current_quadrant + 2;} else {_current_quadrant = -_current_quadrant + 1;};
+    // current_quadrant is set to integer 0,1,2,3, where: NE:0, SE:1, SW:2, NW:3
+    
+
+        Vector3f crv = rav - eight_in_R2.current_cv;
+        Vector3f ctv = eight_in_R2.current_tv;
+
+////
+//    struct Location g1start;
+//    struct Location g1end;
+//    struct Location g2start;
+//    struct Location g2end;
+//    if(eight_in_R2.orientation == 1){
+//        g1start = eight_in_R2.c2g1_loc;
+//        g1end = eight_in_R2.g1c1_loc;
+//        g2start = eight_in_R2.c1g2_loc;
+//        g2end = eight_in_R2.g2c2_loc;
+//    } else {
+//        g1start = eight_in_R2.g1c1_loc;
+//        g1end = eight_in_R2.c2g1_loc;
+//        g2start = eight_in_R2.g2c2_loc;
+//        g2end = eight_in_R2.c1g2_loc;
+//    }
+
+    float angle;
+    switch(eight_in_R2.current_segment){
+
+    case 0:
+        // g1
+        //hal.console->println("segment 0: g1");
+        angle = atan2f(eight_in_R2.etg1v.y, eight_in_R2.etg1v.x) * RAD_TO_DEG_DOUBLE;
+        //angle = 90 - angle;
+        nav_controller->update_loiter_ellipse(eight_in_R2.center_loc, 3.0f * eight_in_R2.S1_radius_cm, 0.0f, angle, eight_in_R2.orientation, eight_in_R2.aircraft_loc, eight_in_R2.aircraft_vel, eight_in_R2.desired_loc);
+        break;
+    case 1:
+        // c1
+        //hal.console->println("segment 1: c1");
+        nav_controller->update_loiter_ellipse(eight_in_R2.c1_loc, eight_in_R2.S1_radius_cm, 1.0f, eight_in_R2.azimuth_deg, eight_in_R2.orientation, eight_in_R2.aircraft_loc, eight_in_R2.aircraft_vel, eight_in_R2.desired_loc);
+        break;
+    case 2:
+        // g2
+        //hal.console->println("segment 2: g2");
+        angle = atan2f(eight_in_R2.etg2v.y, eight_in_R2.etg2v.x) * RAD_TO_DEG_DOUBLE;
+        // angle = 90 - angle;
+        nav_controller->update_loiter_ellipse(eight_in_R2.center_loc, 3.0f * eight_in_R2.S1_radius_cm, 0.0f, angle, eight_in_R2.orientation, eight_in_R2.aircraft_loc, eight_in_R2.aircraft_vel, eight_in_R2.desired_loc);
+        break;
+    case 3:
+        // c2
+        //hal.console->println("segment 3: c2");
+        nav_controller->update_loiter_ellipse(eight_in_R2.c2_loc, eight_in_R2.S1_radius_cm, 1.0f, eight_in_R2.azimuth_deg, -eight_in_R2.orientation, eight_in_R2.aircraft_loc, eight_in_R2.aircraft_vel, eight_in_R2.desired_loc);
+        break;
+    }
+
+}
+
 void Plane::update_eight_sphere() {
 
     //    //nav_controller->update_loiter_3d(eight_in_S2.S2_loc, eight_in_S2.segments_ercv[eight_in_S2.current_segment], eight_in_S2.S2_radius_cm, eight_in_S2.segments_theta_r[eight_in_S2.current_segment], eight_in_S2.segments_orientation[eight_in_S2.current_segment], eight_in_S2.aircraft_posccenter, eight_in_S2.aircraft_vel, eight_in_S2.desired_loc);

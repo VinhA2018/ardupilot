@@ -75,7 +75,10 @@ Mode *Plane::mode_from_mode_num(const enum Mode::Number num)
         break;
 	case Mode::Number::UPWIND:
         ret = &mode_upwind;
-        break;	
+        break;
+    case Mode::Number::NAVIGATE:
+        ret = &mode_navigate;
+        break;    	
     }
     return ret;
 }

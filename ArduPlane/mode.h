@@ -38,7 +38,8 @@ public:
         QRTL          = 21,
         QAUTOTUNE     = 22,
         QACRO         = 23,
-		UPWIND 		  = 24,  //new mode for the upwind project » flying 8 figure
+		UPWIND 		  = 24,         //new mode for the upwind project » flying 8 figure
+        NAVIGATE      = 25,         //new mode for the upwind project » perform waypoints navigation
     };
 
     // Constructor
@@ -489,6 +490,22 @@ public:
     Number mode_number() const override { return Number::UPWIND; }
     const char *name() const override { return "UPWIND"; }
     const char *name4() const override { return "UPWD"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+protected:
+
+    bool _enter() override;
+};
+
+class ModeNavigate : public Mode
+{
+public:
+
+    Number mode_number() const override { return Number::NAVIGATE; }
+    const char *name() const override { return "NAVIGATE"; }
+    const char *name4() const override { return "NVGT"; }
 
     // methods that affect movement of the vehicle in this mode
     void update() override;

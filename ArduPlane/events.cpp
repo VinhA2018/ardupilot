@@ -44,6 +44,7 @@ void Plane::failsafe_short_on_event(enum failsafe_state fstype, mode_reason_t re
     case Mode::Number::GUIDED:
     case Mode::Number::LOITER:
 	case Mode::Number::UPWIND:
+    case Mode::Number::NAVIGATE:
         if(g.fs_action_short != FS_ACTION_SHORT_BESTGUESS) {
             failsafe.saved_mode_number = control_mode->mode_number();
             failsafe.saved_mode_set = true;
@@ -112,6 +113,7 @@ void Plane::failsafe_long_on_event(enum failsafe_state fstype, mode_reason_t rea
     case Mode::Number::GUIDED:
     case Mode::Number::LOITER:
 	case Mode::Number::UPWIND:
+    case Mode::Number::NAVIGATE:
         if(g.fs_action_long == FS_ACTION_LONG_PARACHUTE) {
 #if PARACHUTE == ENABLED
             parachute_release();

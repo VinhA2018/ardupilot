@@ -111,6 +111,9 @@ private:
     // L1 tracking loop damping ratio
     AP_Float _L1_damping;
 
+    // L distance
+    AP_Float _L_dist;
+
     // previous value of cross-track velocity
     float _last_Nu;
 
