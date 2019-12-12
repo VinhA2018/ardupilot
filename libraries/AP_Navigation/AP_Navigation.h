@@ -79,7 +79,7 @@ public:
     virtual void update_loiter(const struct Location &center_WP, float radius, int8_t loiter_direction) = 0;
 
     virtual void update_loiter_3d(const struct Location &S2center, const Vector3f &ercv, int32_t S2radius, const float & theta_r, int8_t orientation, struct Location &aircraft_loc, Vector3f &aircraft_vel, struct Location &desired_loc) = 0;
-    
+    virtual void update_loiter_ellipse(const struct Location &center_loc, const int32_t maxradius_cm, const float minmaxratio, const float psi, const int8_t orientation, struct Location &aircraft_loc, Vector3f &aircraft_vel, struct Location &desired_loc) =0;
     // update the internal state of the navigation controller, given a
     // fixed heading. This is the step function for navigation control
     // for a fixed heading.  This function is called at regular

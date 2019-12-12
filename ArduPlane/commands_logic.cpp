@@ -949,10 +949,10 @@ void Plane::do_zero_plane()
   eight_in_R2.rc2v = (eight_in_R2.Rm * Vector3f(0.0f, -eight_in_R2.d_c_cm/100.0f, -eight_in_R2.height_cm/100.0f));
 
   eight_in_R2.c1_loc = home;
-  location_offset(eight_in_R2.c1_loc, eight_in_R2.rc1v.x, eight_in_R2.rc1v.y);
+  eight_in_R2.c1_loc.offset(eight_in_R2.rc1v.x, eight_in_R2.rc1v.y);
   eight_in_R2.c1_loc.alt = eight_in_R2.c1_loc.alt + eight_in_R2.height_cm/100.0f;
   eight_in_R2.c2_loc = home;
-  location_offset(eight_in_R2.c2_loc, eight_in_R2.rc2v.x, eight_in_R2.rc2v.y);
+  eight_in_R2.c2_loc.offset(eight_in_R2.rc2v.x, eight_in_R2.rc2v.y);
   eight_in_R2.c2_loc.alt = eight_in_R2.c2_loc.alt + eight_in_R2.height_cm/100.0f;
 
 
@@ -967,19 +967,19 @@ void Plane::do_zero_plane()
   // locations of the transition points
   // NE
   eight_in_R2.g1c1_loc = eight_in_R2.center_loc;
-  location_offset(eight_in_R2.g1c1_loc, eight_in_R2.rtg1c1.x, eight_in_R2.rtg1c1.y);
+  eight_in_R2.g1c1_loc.offset(eight_in_R2.rtg1c1.x, eight_in_R2.rtg1c1.y);
   eight_in_R2.g1c1_loc.alt = eight_in_R2.g1c1_loc.alt - eight_in_R2.height_cm/100.0f;
   // SE
   eight_in_R2.c1g2_loc = eight_in_R2.center_loc;
-  location_offset(eight_in_R2.c1g2_loc, eight_in_R2.rtc1g2.x, eight_in_R2.rtc1g2.y);
+  eight_in_R2.c1g2_loc.offset(eight_in_R2.rtc1g2.x, eight_in_R2.rtc1g2.y);
   eight_in_R2.c1g2_loc.alt = eight_in_R2.c1g2_loc.alt - eight_in_R2.height_cm/100.0f;
   // SW
   eight_in_R2.c2g1_loc = eight_in_R2.center_loc;
-  location_offset(eight_in_R2.c2g1_loc, -eight_in_R2.rtg1c1.x, -eight_in_R2.rtg1c1.y);
+  eight_in_R2.c2g1_loc.offset(-eight_in_R2.rtg1c1.x, -eight_in_R2.rtg1c1.y);
   eight_in_R2.g1c1_loc.alt = eight_in_R2.g1c1_loc.alt - eight_in_R2.height_cm/100.0f;
   // NW
   eight_in_R2.g2c2_loc = eight_in_R2.center_loc;
-  location_offset(eight_in_R2.g2c2_loc, -eight_in_R2.rtc1g2.x, -eight_in_R2.rtc1g2.y);
+  eight_in_R2.g2c2_loc.offset(-eight_in_R2.rtc1g2.x, -eight_in_R2.rtc1g2.y);
   eight_in_R2.g2c2_loc.alt = eight_in_R2.g2c2_loc.alt - eight_in_R2.height_cm/100.0f;
 
 

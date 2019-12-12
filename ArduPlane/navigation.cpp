@@ -259,7 +259,7 @@ void Plane::update_zero_plane()
 {
     eight_in_R2.set_current_segment(eight_in_R2.aircraft_loc, eight_in_R2.aircraft_vel);
 
-    Vector3f rav =  location_3d_diff_NED(eight_in_R2.center_loc, eight_in_R2.aircraft_loc);
+    Vector3f rav =  eight_in_R2.center_loc.get_distance_NED(eight_in_R2.aircraft_loc);
     Vector3f _rxaplanev = rav - eight_in_R2.erxv * (eight_in_R2.erxv * rav);
     int8_t _current_quadrant;
     // north or south
@@ -269,8 +269,8 @@ void Plane::update_zero_plane()
     // current_quadrant is set to integer 0,1,2,3, where: NE:0, SE:1, SW:2, NW:3
     
 
-        Vector3f crv = rav - eight_in_R2.current_cv;
-        Vector3f ctv = eight_in_R2.current_tv;
+    //Vector3f crv = rav - eight_in_R2.current_cv;
+    //Vector3f ctv = eight_in_R2.current_tv;
 
 ////
 //    struct Location g1start;
