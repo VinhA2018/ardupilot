@@ -898,9 +898,9 @@ void Plane::do_loiter_at_location()
 void Plane::do_zero_plane()
 {
     eight_in_R2.center_loc = home; // location of the center point on the ground
-    eight_in_R2.d_c_cm = 20000; // horizontal distance from crossing point to turning point
-    eight_in_R2.S1_radius_cm = 10000; // radius of the turning circles
-    eight_in_R2.height_cm = 10000; // height of the pattern above the center point
+    eight_in_R2.d_c_cm = 20000; // horizontal distance from crossing point to turning point 200 metros
+    eight_in_R2.S1_radius_cm = 10000; // radius of the turning circles 100 metros
+    eight_in_R2.height_cm = 10000; // height of the pattern above the center point 100 metros
     eight_in_R2.azimuth_deg = 0.0f;
     eight_in_R2.orientation = 1;     // orientation of the figure-eight pattern
 
@@ -946,7 +946,10 @@ void Plane::do_zero_plane()
   eight_in_R2.rc1v = (eight_in_R2.Rm * Vector3f(0.0f, eight_in_R2.d_c_cm/100.0f, -eight_in_R2.height_cm/100.0f));
   // vector of the second turning circle center
   // orientation of c2 = - orientation
+  //eight_in_R2.rc2v = (eight_in_R2.Rm * Vector3f(0.0f, -eight_in_R2.d_c_cm/100.0f, -eight_in_R2.height_cm/100.0f));
   eight_in_R2.rc2v = (eight_in_R2.Rm * Vector3f(0.0f, -eight_in_R2.d_c_cm/100.0f, -eight_in_R2.height_cm/100.0f));
+  //PRECISO ALTERAR AQUI OS SINAIS PARA QUE O CIRCULO SEJA FEITO DIREITO
+
 
   eight_in_R2.c1_loc = home;
   eight_in_R2.c1_loc.offset(eight_in_R2.rc1v.x, eight_in_R2.rc1v.y);
@@ -964,7 +967,7 @@ void Plane::do_zero_plane()
   eight_in_R2.rtc1g2 = (eight_in_R2.Rm * (eight_in_R2.rc1v + Vector3f(-eight_in_R2.S1_radius_cm/100.0f * eight_in_R2.cos_chihalf, -eight_in_R2.S1_radius_cm/100.0f * eight_in_R2.sin_chihalf, 0.0f)));
 
 
-  // locations of the transition points
+  // locations of the transition points  
   // NE
   eight_in_R2.g1c1_loc = eight_in_R2.center_loc;
   eight_in_R2.g1c1_loc.offset(eight_in_R2.rtg1c1.x, eight_in_R2.rtg1c1.y);
@@ -982,11 +985,13 @@ void Plane::do_zero_plane()
   eight_in_R2.g2c2_loc.offset(-eight_in_R2.rtc1g2.x, -eight_in_R2.rtc1g2.y);
   eight_in_R2.g2c2_loc.alt = eight_in_R2.g2c2_loc.alt - eight_in_R2.height_cm/100.0f;
 
-
+  
   // unit tangent vectors of the two geodesic segments
+  //eight_in_R2.etg1v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
   eight_in_R2.etg1v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
+  //eight_in_R2.etg2v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, -eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
   eight_in_R2.etg2v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, -eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
-
+  
   // tangent vectors at the transgression points between the segments in the directions demanded by orientation
   // in NE quadrant:
   eight_in_R2.etg1c1v = eight_in_R2.etg1v;

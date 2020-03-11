@@ -115,6 +115,9 @@ private:
     // L distance
     AP_Float _L_dist;
 
+    // L use
+    AP_Float _L_use;
+
     // previous value of cross-track velocity
     float _last_Nu;
 

@@ -39,13 +39,22 @@ const AP_Param::GroupInfo AP_L1_Control::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("L_DIST",    3, AP_L1_Control, _L_dist, 40),
 
+    // @Param: L_USE
+    // @DisplayName: Using L 
+    // @Description: L distance to perform upwind mode 1, or 0 to use L1
+    // @Units: m
+    // @Range: 0 1
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("L_USE",    4, AP_L1_Control, _L_use, 0),
+
     // @Param: LIM_BANK
     // @DisplayName: Loiter Radius Bank Angle Limit
     // @Description: The sealevel bank angle limit for a continous loiter. (Used to calculate airframe loading limits at higher altitudes). Setting to 0, will instead just scale the loiter radius directly
     // @Units: deg
     // @Range: 0 89
     // @User: Advanced
-    AP_GROUPINFO_FRAME("LIM_BANK",   4, AP_L1_Control, _loiter_bank_limit, 0.0f, AP_PARAM_FRAME_PLANE),
+    AP_GROUPINFO_FRAME("LIM_BANK",   5, AP_L1_Control, _loiter_bank_limit, 0.0f, AP_PARAM_FRAME_PLANE),
 
     
 
@@ -481,8 +490,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     float xtrackVel;
     float ltrackVel;
 
-    // Calculate L1 gain required for specified damping
-    //float K_L1 = 4.0f * _L1_damping * _L1_damping;
+    float L_use = _L_use;
 
     // Get current position and velocity
     if (_ahrs.get_position(_current_loc) == false) {
@@ -530,10 +538,15 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
     // calculate distance to target track, for reporting
     _crosstrack_error = A_air % AB;
     
-    
-    _L1_dist = sqrt(sq(_L_dist)+sq(_crosstrack_error));
+     if (L_use < 1)
+    {
+        _L1_dist = MAX(0.3183099f * _L1_damping * _L1_period * groundSpeed, dist_min);
+    }
+    else{
+        _L1_dist = sqrt(sq(_L_dist)+sq(_crosstrack_error));
+    }
 
-    //hal.console->printf("L1 dist: %2f\n", _L1_dist);
+    hal.console->printf("L1 dist: %2f\n", _L1_dist);
    
    
     //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
@@ -578,7 +591,17 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
     //Limit Nu to +-(pi/2)
     Nu = constrain_float(Nu, -1.5708f, +1.5708f);
-    _latAccDem = 2.0f * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
+
+     if (L_use < 1)
+    {
+        hal.console->println("L_use = 0");
+        float K_L1 = 4.0f * _L1_damping * _L1_damping;
+        _latAccDem = K_L1 * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
+    }
+    else{
+        hal.console->println("L_use = 1");
+        _latAccDem = 2.0f * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);      
+    }
 
     // Waypoint capture status is always false during waypoint following
     _WPcircle = false;
@@ -735,6 +758,7 @@ void AP_L1_Control::update_loiter_ellipse(const struct Location &center_loc, con
 
     // Calculate L1 gain required for specified damping (used during waypoint capture)
     const float K_L1 = 4.0f * _L1_damping * _L1_damping;
+    
 
     // get current position and velocity in NED frame
     if (_ahrs.get_position(_current_loc) == false) {
@@ -786,11 +810,11 @@ void AP_L1_Control::update_loiter_ellipse(const struct Location &center_loc, con
     }
 
     // Calculate time varying control parameters
-    // Calculate the L1 length required for specified period
-    // 0.3183099 = 1/pi
-    _L1_dist = 0.3183099f * _L1_damping * _L1_period * velal;
+    
+    
 
-
+    
+    //hal.console->printf("CrossTrackError: : %2f\n", _crosstrack_error);
 
     //Calculate Nu to capture center_WP
     const float xtrackVelCap = erlv % velalv; // Velocity across line - perpendicular to radial inbound to WP
@@ -802,8 +826,7 @@ void AP_L1_Control::update_loiter_ellipse(const struct Location &center_loc, con
 
     Nu = constrain_float(Nu, -M_PI_2, M_PI_2); //Limit Nu to +- Pi/2
 
-    //Calculate lat accln demand to capture center_WP (use L1 guidance law)
-    const float latAccDemCap = K_L1 * velal * velal / _L1_dist * sinf(Nu);
+    
 
     // calculate desired position on ellipse with major and minor principal axes along unit vectors e1 and e2, respectively
     // for given position vector posalv(phia) = ra(cos(phia)e1 + cos(theta)sin(phia)e2) of the aircraft
@@ -907,6 +930,25 @@ void AP_L1_Control::update_loiter_ellipse(const struct Location &center_loc, con
        // keep crosstrack error for reporting
        _crosstrack_error = xtrackErrCirc;
 
+    //Calculate lat accln demand to capture center_WP (use L1 guidance law)
+    //Calculate the L1 length required for specified period
+    //0.3183099 = 1/pi
+    float L_use = _L_use;
+    float latAccDemCap;
+
+    if (L_use < 1)
+    {
+        hal.console->println("L_use = 0");
+        _L1_dist = 0.3183099f * _L1_damping * _L1_period * velal;
+        latAccDemCap = K_L1 * velal * velal / _L1_dist * sinf(Nu);
+    }
+    else{
+        hal.console->println("L_use = 1");
+        _L1_dist = sqrt(sq(_L_dist)+sq(_crosstrack_error));
+        latAccDemCap = 2.0f * velal * velal / _L1_dist * sinf(Nu);      
+    }
+    
+    hal.console->printf("CrossTrackError: : %2f\n", _crosstrack_error);
        //Calculate PD control correction to circle waypoint_ahrs.roll
        float latAccDemCircPD = (xtrackErrCirc * Kx + xtrackVelCirc * Kv);
 
@@ -936,19 +978,19 @@ void AP_L1_Control::update_loiter_ellipse(const struct Location &center_loc, con
            _WPcircle = false;
            _bearing_error = Nu; // angle between demanded and achieved velocity vector, +ve to left of track
            _nav_bearing = atan2f(-posalv.y , -posalv.x); // bearing (radians) from AC to L1 point
-           hal.console->println("capture");
+           //hal.console->println("capture");
        } else {
            _latAccDem = latAccDemCirc;
            _WPcircle = true;
            _bearing_error = 0.0f; // bearing error (radians), +ve to left of track
            _nav_bearing = atan2f(-posalv.y , -posalv.x); // bearing (radians)from AC to L1 point
-//           hal.console->println("loiter_ellipse");
+        //hal.console->println("loiter_ellipse");
        }
 
        _data_is_stale = false; // status are correctly updated with current waypoint data
 
     } else {
-        hal.console->println("degenerate ellipse: ");
+        //hal.console->println("degenerate ellipse: ");
         // if cos_theta == 0, the ellipse is degenerate; its lateral projection is a straight line spanned by e1
 
         Vector2f deltav = e1 * maxradius_cm / 100.0f * 2.0 * orientation;

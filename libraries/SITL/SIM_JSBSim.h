@@ -55,7 +55,7 @@ private:
     int jsbsim_stdout;
 
     // default JSBSim model
-    const char *jsbsim_model = "Rascal";
+    const char *jsbsim_model = "EasyStar";
 
     bool created_templates;
     bool started_jsbsim;
