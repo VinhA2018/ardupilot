@@ -546,7 +546,7 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
         _L1_dist = sqrt(sq(_L_dist)+sq(_crosstrack_error));
     }
 
-    hal.console->printf("L1 dist: %2f\n", _L1_dist);
+    //hal.console->printf("L1 dist: %2f\n", _L1_dist);
    
    
     //Determine if the aircraft is behind a +-135 degree degree arc centred on WP A
@@ -594,12 +594,12 @@ void AP_L1_Control::update_waypoint(const struct Location &prev_WP, const struct
 
      if (L_use < 1)
     {
-        hal.console->println("L_use = 0");
+        //hal.console->println("L_use = 0");
         float K_L1 = 4.0f * _L1_damping * _L1_damping;
         _latAccDem = K_L1 * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);
     }
     else{
-        hal.console->println("L_use = 1");
+        //hal.console->println("L_use = 1");
         _latAccDem = 2.0f * groundSpeed * groundSpeed / _L1_dist * sinf(Nu);      
     }
 
@@ -938,17 +938,17 @@ void AP_L1_Control::update_loiter_ellipse(const struct Location &center_loc, con
 
     if (L_use < 1)
     {
-        hal.console->println("L_use = 0");
+        //hal.console->println("L_use = 0");
         _L1_dist = 0.3183099f * _L1_damping * _L1_period * velal;
         latAccDemCap = K_L1 * velal * velal / _L1_dist * sinf(Nu);
     }
     else{
-        hal.console->println("L_use = 1");
+        //hal.console->println("L_use = 1");
         _L1_dist = sqrt(sq(_L_dist)+sq(_crosstrack_error));
         latAccDemCap = 2.0f * velal * velal / _L1_dist * sinf(Nu);      
     }
     
-    hal.console->printf("CrossTrackError: : %2f\n", _crosstrack_error);
+    //hal.console->printf("CrossTrackError: : %2f\n", _crosstrack_error);
        //Calculate PD control correction to circle waypoint_ahrs.roll
        float latAccDemCircPD = (xtrackErrCirc * Kx + xtrackVelCirc * Kv);
 
