@@ -5,10 +5,10 @@
  xsi:noNamespaceSchemaLocation="http://jsbsim.sourceforge.net/JSBSim.xsd">
 
     <fileheader>
-        <author> Author Name </author>
-        <filecreationdate> Creation Date </filecreationdate>
-        <version> Version </version>
-        <description> Models a rascal </description>
+        <author> Sérgio Vinha </author>
+        <filecreationdate> 27 FEV 2020 </filecreationdate>
+        <version> Version 1.0 </version>
+        <description> Models an EASY STAR II of the UPWIND project </description>
     </fileheader>
 
     <metrics>
@@ -256,6 +256,31 @@
         </aerosurface_scale>
      </channel>
     </flight_control>
+
+<external_reactions>
+	<!-- "Declare" the reefing term -->
+		<force name="rope" frame="BODY">
+			
+			 <!-- The location below is in structural frame (x positive
+			 aft), so this location describes a point 1 foot aft
+			 of the origin. In this case, the origin is the center. -->
+			 <location unit="M">
+				 <x>0</x>
+				 <y>0</y>
+				 <z>0</z>
+			 </location>
+			 <!-- The direction describes a unit vector. In this case, since
+			 the selected frame is the WIND frame, the "-1" x component
+			 describes a direction exactly opposite of the direction
+			 into the wind vector. That is, the direction specified below
+			 is the direction that the drag force acts in. -->
+			 <direction>
+				 <x>0</x>
+				 <y>-1</y>
+				 <z>0</z>
+			 </direction>
+		 </force>
+	</external_reactions>
 
     <aerodynamics>
         <axis name="DRAG">

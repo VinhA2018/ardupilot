@@ -117,8 +117,15 @@ bool JSBSim::create_templates(void)
 "      <set name=\"simulation/do_simple_trim\" value=\"2\"/>\n"
 "      <notify/>\n"
 "    </event>\n"
-"  </run>\n"
 "\n"
+// Added a external force to the airplane! UPWIND PROJECT
+//"    <event name=\"start force\">\n"
+//"      <condition> simulation/sim-time-sec le 0.01 </condition>\n"
+//"      <set name=\"external_reactions/rope/magnitude\" value=\"2\"/>\n"
+//"      <notify/>\n"
+//"    </event>\n"
+//"\n"
+"  </run>\n"
 "</runscript>\n"
 "",
             jsbsim_model,

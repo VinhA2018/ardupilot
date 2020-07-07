@@ -73,6 +73,12 @@ Mode *Plane::mode_from_mode_num(const enum Mode::Number num)
     case Mode::Number::TAKEOFF:
         ret = &mode_takeoff;
         break;
+	case Mode::Number::UPWIND:
+        ret = &mode_upwind;
+        break;
+    case Mode::Number::NAVIGATE:
+        ret = &mode_navigate;
+        break;    	
     }
     return ret;
 }

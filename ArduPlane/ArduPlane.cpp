@@ -494,6 +494,14 @@ void Plane::update_navigation()
     case Mode::Number::TAKEOFF:
         update_loiter(radius);
         break;
+		
+	case Mode::Number::UPWIND:
+		update_eight_sphere();
+		break;
+
+    case Mode::Number::NAVIGATE:
+        update_zero_plane();
+        break;    
 
     case Mode::Number::CRUISE:
         update_cruise();

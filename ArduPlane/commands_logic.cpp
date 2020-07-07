@@ -895,6 +895,243 @@ void Plane::do_loiter_at_location()
     next_WP_loc = current_loc;
 }
 
+void Plane::do_zero_plane()
+{
+    eight_in_R2.center_loc = home; // location of the center point on the ground
+    eight_in_R2.d_c_cm = 20000; // horizontal distance from crossing point to turning point 200 metros
+    eight_in_R2.S1_radius_cm = 10000; // radius of the turning circles 100 metros
+    eight_in_R2.height_cm = 10000; // height of the pattern above the center point 100 metros
+    eight_in_R2.azimuth_deg = 0.0f;
+    eight_in_R2.orientation = 1;     // orientation of the figure-eight pattern
+
+    // the four segments are labeled by integers 0,1,2,3 in dependence of orientation
+    // for orientation of the figure-eight pattern: +1: segment sequence is: geodesic_1 -> circle_1 -> geodesic_2 -> circle_2
+    //                                              -1: segment sequence is: geodesic_1 -> circle_2 -> geodesic_2 -> circle_1
+
+    // set current quadrant to a value that is not 0,1,2,3 such that it is altered in the initialization
+    eight_in_R2.current_quadrant = 4;
+    eight_in_R2.current_segment = 0; // sets the start segment when eight_sphere is initialized
+                                     // and the entry segment if no segment switching occurs because the aircraft is located in the vicinity of the crossing point defined by _mindistxaplane
+
+  // derived parameters
+  // trigonometric functions of all angles
+  // trigonometric functions of the angles determining the attitude (azimuthal position in the sky) of the figure-eight pattern
+  eight_in_R2.cos_psi = cosf(radians(eight_in_R2.azimuth_deg));
+  eight_in_R2.sin_psi = sinf(radians(eight_in_R2.azimuth_deg));
+  // trigonometric functions of half of the crossing angle
+  eight_in_R2.sin_chihalf = (eight_in_R2.S1_radius_cm / 100.0f) / (eight_in_R2.d_c_cm / 100.0f);
+  eight_in_R2.cos_chihalf = sqrt(1 - sq(eight_in_R2.sin_chihalf));
+
+  // crossing point of the figure-eight pattern: coordinate frame, rotation matrix, position vector
+  // unit vector pointing from S2_loc to the crossing point of the figure-eight pattern
+  eight_in_R2.erxv = Vector3f(0, 0, -1);
+  // unit vector of the tangential plane at the crossing point in polar direction
+  eight_in_R2.ethetaxv = Vector3f(eight_in_R2.cos_psi, eight_in_R2.sin_psi, 0);
+  // unit vector of the tangential plane at the crossing point in azimuthal direction
+  eight_in_R2.epsixv = Vector3f(-eight_in_R2.sin_psi, eight_in_R2.cos_psi, 0);
+  // rotation matrix that yields the vectors of the figure_eight pattern with crossing point in the direction erxv
+  // from those of the figure-eight pattern with crossing point at erv; // = (0,0,-1) and turning circle centers aligned with the east axis
+  eight_in_R2.Rm = Matrix3f(eight_in_R2.ethetaxv, eight_in_R2.epsixv, -eight_in_R2.erxv);
+  // vector pointing from S2_loc to the crossing point
+  eight_in_R2.rxv = eight_in_R2.erxv * eight_in_R2.height_cm / 100.0f;
+
+  // figure-eight pattern from four circle segments defined via four planes in canonical orientation
+  // canonical orientation (at azimuth_deg = 0, elevation_deg = 90 in the NED coordinate system): crossing point is upwards (in the (0,0,-1)-direction) from S2_loc; turning circle centers are aligned along east axis
+  // figure-8-pattern is given by the sequences:
+  // for orientation = +1: geodesic_1 -> circle_1 -> geodesic_2 -> circle_2
+  //                   -1: geodesic_1 -> circle_2 -> geodesic_2 -> circle_1
+  // individual circle segment orientation = +1 corresponds to applying the right-hand rule to minus the normal vectors pointing to the center of the circle segment
+  // vector of the first turning circle center
+  // orientation of c1 = orientation
+  eight_in_R2.rc1v = (eight_in_R2.Rm * Vector3f(0.0f, eight_in_R2.d_c_cm/100.0f, -eight_in_R2.height_cm/100.0f));
+  // vector of the second turning circle center
+  // orientation of c2 = - orientation
+  //eight_in_R2.rc2v = (eight_in_R2.Rm * Vector3f(0.0f, -eight_in_R2.d_c_cm/100.0f, -eight_in_R2.height_cm/100.0f));
+  eight_in_R2.rc2v = (eight_in_R2.Rm * Vector3f(0.0f, -eight_in_R2.d_c_cm/100.0f, -eight_in_R2.height_cm/100.0f));
+  //PRECISO ALTERAR AQUI OS SINAIS PARA QUE O CIRCULO SEJA FEITO DIREITO
+
+
+  eight_in_R2.c1_loc = home;
+  eight_in_R2.c1_loc.offset(eight_in_R2.rc1v.x, eight_in_R2.rc1v.y);
+  eight_in_R2.c1_loc.alt = eight_in_R2.c1_loc.alt + eight_in_R2.height_cm/100.0f;
+  eight_in_R2.c2_loc = home;
+  eight_in_R2.c2_loc.offset(eight_in_R2.rc2v.x, eight_in_R2.rc2v.y);
+  eight_in_R2.c2_loc.alt = eight_in_R2.c2_loc.alt + eight_in_R2.height_cm/100.0f;
+
+
+
+  // vectors from the center of the plane to the eastern transition points
+  // NE
+  eight_in_R2.rtg1c1 = (eight_in_R2.Rm * (eight_in_R2.rc1v + Vector3f(eight_in_R2.S1_radius_cm/100.0f * eight_in_R2.cos_chihalf, -eight_in_R2.S1_radius_cm/100.0f * eight_in_R2.sin_chihalf, 0.0f)));
+  // SE
+  eight_in_R2.rtc1g2 = (eight_in_R2.Rm * (eight_in_R2.rc1v + Vector3f(-eight_in_R2.S1_radius_cm/100.0f * eight_in_R2.cos_chihalf, -eight_in_R2.S1_radius_cm/100.0f * eight_in_R2.sin_chihalf, 0.0f)));
+
+
+  // locations of the transition points  
+  // NE
+  eight_in_R2.g1c1_loc = eight_in_R2.center_loc;
+  eight_in_R2.g1c1_loc.offset(eight_in_R2.rtg1c1.x, eight_in_R2.rtg1c1.y);
+  eight_in_R2.g1c1_loc.alt = eight_in_R2.g1c1_loc.alt - eight_in_R2.height_cm/100.0f;
+  // SE
+  eight_in_R2.c1g2_loc = eight_in_R2.center_loc;
+  eight_in_R2.c1g2_loc.offset(eight_in_R2.rtc1g2.x, eight_in_R2.rtc1g2.y);
+  eight_in_R2.c1g2_loc.alt = eight_in_R2.c1g2_loc.alt - eight_in_R2.height_cm/100.0f;
+  // SW
+  eight_in_R2.c2g1_loc = eight_in_R2.center_loc;
+  eight_in_R2.c2g1_loc.offset(-eight_in_R2.rtg1c1.x, -eight_in_R2.rtg1c1.y);
+  eight_in_R2.g1c1_loc.alt = eight_in_R2.g1c1_loc.alt - eight_in_R2.height_cm/100.0f;
+  // NW
+  eight_in_R2.g2c2_loc = eight_in_R2.center_loc;
+  eight_in_R2.g2c2_loc.offset(-eight_in_R2.rtc1g2.x, -eight_in_R2.rtc1g2.y);
+  eight_in_R2.g2c2_loc.alt = eight_in_R2.g2c2_loc.alt - eight_in_R2.height_cm/100.0f;
+
+  
+  // unit tangent vectors of the two geodesic segments
+  //eight_in_R2.etg1v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
+  eight_in_R2.etg1v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
+  //eight_in_R2.etg2v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, -eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
+  eight_in_R2.etg2v = eight_in_R2.Rm * Vector3f(eight_in_R2.sin_chihalf, -eight_in_R2.cos_chihalf, 0.0f) * eight_in_R2.orientation;
+  
+  // tangent vectors at the transgression points between the segments in the directions demanded by orientation
+  // in NE quadrant:
+  eight_in_R2.etg1c1v = eight_in_R2.etg1v;
+  // in SE quadrant:
+  eight_in_R2.etc1g2v = eight_in_R2.etg2v;
+  // in NW quadrant
+  eight_in_R2.etg2c2v = eight_in_R2.etg2v;
+  // in SW quadrant
+  eight_in_R2.etc2g1v = eight_in_R2.etg1v;
+
+  // array of turning circle center vectors labeled by the quadrant number
+  eight_in_R2.centervectors[0] = eight_in_R2.rc1v;
+  eight_in_R2.centervectors[1] = eight_in_R2.rc1v;
+  eight_in_R2.centervectors[2] = eight_in_R2.rc2v;
+  eight_in_R2.centervectors[3] = eight_in_R2.rc2v;
+  // array of unit tangent vectors at the transgression points of the segments labeled by the quadrant number
+  eight_in_R2.tangentvectors[0] =  eight_in_R2.etg1c1v;
+  eight_in_R2.tangentvectors[1] =  eight_in_R2.etc1g2v;
+  eight_in_R2.tangentvectors[2] =  eight_in_R2.etc2g1v;
+  eight_in_R2.tangentvectors[3] =  eight_in_R2.etg2c2v;
+
+}
+
+void Plane::do_eight_sphere()
+{
+    eight_in_S2.S2_loc = home; // location of the center of the S2
+    eight_in_S2.S2_radius_cm = 32000; // radius of the S2 in cm
+    eight_in_S2.theta_c_deg = 45.0f; // half of the angle between the centers of the two turning circle segments, range: [0,90] degrees
+    eight_in_S2.theta_r_deg = 15.f; // opening angle of the cone with tip at S2_loc and base given by the turning circle, range: [0,90-theta_c_deg] degrees in order to guarantee that the sweeping angle between the two apices is less than 180 deg.
+    eight_in_S2.azimuth_deg = 0.0f; // azimuth angle of the vector pointing from S2_loc to the crossing point of the figure-eight pattern, range: [0,360]
+    eight_in_S2.elevation_deg = 90.0f; // inclination angle of the vector pointing from S2_loc to the crossing point of the figure-eight pattern, range [0,90]
+    eight_in_S2.orientation = 1; // orientation of the figure-eight pattern: +1: downwards flight on geodesic, upwards flight on turning circle segments
+                                 //                                          -1: upwards flight on geodesic, downwards flight on turning circle segments
+
+    // the four segments are labeled by integers 0,1,2,3 in dependence of orientation
+    // for orientation of the figure-eight pattern: +1: segment sequence is: geodesic_1 -> circle_1 -> geodesic_2 -> circle_2
+    //                                              -1: segment sequence is: geodesic_1 -> circle_2 -> geodesic_2 -> circle_1
+
+    // derived parameters
+    // trigonometric functions of all angles
+    // calculation of polar angle from elevation
+    eight_in_S2.theta = 90.0f - eight_in_S2.elevation_deg;
+    // trigonometric functions of the angles determining the attitude (azimuthal and polar position in the sky) of the figure-eight pattern
+    eight_in_S2.cos_psi = cosf(radians(eight_in_S2.azimuth_deg));
+    eight_in_S2.sin_psi = sinf(radians(eight_in_S2.azimuth_deg));
+    eight_in_S2.cos_theta = cosf(radians(eight_in_S2.theta));
+    eight_in_S2.sin_theta = sinf(radians(eight_in_S2.theta));
+    // trigonometric functions of the opening angle
+    // ratio of distance of the turning circle plane and of the radius of the sphere
+    eight_in_S2.cos_theta_r = cosf(radians(eight_in_S2.theta_r_deg));
+    // ratio of the turning circle radius and of the radius of the sphere
+    eight_in_S2.sin_theta_r = sinf(radians(eight_in_S2.theta_r_deg));
+    // trigonometric functions of the polar angle of the center of the turning circle
+    eight_in_S2.cos_theta_c = cosf(radians(eight_in_S2.theta_c_deg));
+    eight_in_S2.sin_theta_c = sinf(radians(eight_in_S2.theta_c_deg));
+    // trigonometric functions of half of the crossing angle
+    eight_in_S2.cos_chihalf = sqrt(1 - sq(eight_in_S2.sin_theta_r/eight_in_S2.sin_theta_c));
+    eight_in_S2.sin_chihalf = sqrt(1 - sq(eight_in_S2.cos_chihalf));
+    // trigonometric functions of half of the sweeping angle of the geodesic segments
+    eight_in_S2.cos_theta_0 = eight_in_S2.cos_theta_c/eight_in_S2.cos_theta_r;
+    eight_in_S2.sin_theta_0 = sqrt(1 - sq(eight_in_S2.cos_theta_0));
+
+
+    // turning circle segments of the figure-eight pattern: circle radius, distance from origin
+    // radius
+    eight_in_S2.S1_radius_cm = eight_in_S2.S2_radius_cm * eight_in_S2.sin_theta_r;
+    // distance of the centers from S2_loc;
+    eight_in_S2.dist_cm = eight_in_S2.S2_radius_cm * eight_in_S2.cos_theta_r;
+
+    // crossing point of the figure-eight pattern: coordinate frame, rotation matrix, position vector
+    // unit vector pointing from S2_loc to the crossing point of the figure-eight pattern
+    eight_in_S2.erxv = Vector3f(eight_in_S2.sin_theta * eight_in_S2.cos_psi, eight_in_S2.sin_theta * eight_in_S2.sin_psi, -eight_in_S2.cos_theta );
+    // unit vector of the tangential plane at the crossing point in polar direction
+    eight_in_S2.ethetaxv = Vector3f(eight_in_S2.cos_theta * eight_in_S2.cos_psi, eight_in_S2.cos_theta * eight_in_S2.sin_psi, eight_in_S2.sin_theta);
+    // unit vector of the tangential plane at the crossing point in azimuthal direction
+    eight_in_S2.epsixv = Vector3f(-eight_in_S2.sin_psi, eight_in_S2.cos_psi, 0);
+    // rotation matrix that yields the vectors of the figure_eight pattern with crossing point in the direction erxv
+    // from those of the figure-eight pattern with crossing point at erv = (0,0,-1) and turning circle centers aligned with the east axis
+    eight_in_S2.Rm = Matrix3f(eight_in_S2.ethetaxv, eight_in_S2.epsixv, -eight_in_S2.erxv);
+    // vector pointing from S2_loc to the crossing point
+    eight_in_S2.rxv = eight_in_S2.erxv * eight_in_S2.dist_cm / 100.0f;
+
+    // figure-eight pattern from four circle segments defined via four planes in canonical orientation
+    // canonical orientation (at azimuth_deg = 0, elevation_deg = 90 in the NED coordinate system): crossing point is upwards (in the (0,0,-1)-direction) from S2_loc; turning circle centers are aligned along east axis
+    // figure-8-pattern is given by the sequences:
+    // for orientation = +1: geodesic_1 -> circle_1 -> geodesic_2 -> circle_2
+    //                   -1: geodesic_1 -> circle_2 -> geodesic_2 -> circle_1
+    // individual circle segment orientation = +1 corresponds to applying the right-hand rule to minus the normal vectors pointing to the center of the circle segment
+    // unit normal vector of the first turning circle plane (pointing to the center of the first turning circle c1)
+    // orientation of c1 = orientation
+    eight_in_S2.erc1v = eight_in_S2.Rm * Vector3f(0.0f, eight_in_S2.sin_theta_c, -eight_in_S2.cos_theta_c);
+    // unit normal vector of the second turning circle plane (pointing to the center of the second turning circle c2)
+    // orientation of c2 = - orientation
+    eight_in_S2.erc2v = eight_in_S2.Rm * Vector3f(0.0f, -eight_in_S2.sin_theta_c, -eight_in_S2.cos_theta_c);
+    // unit normal vector of the first geodesic plane (geodesic g1: from south-west to north-east)
+    // orientation of g1 = orientation
+    eight_in_S2.erg1v = eight_in_S2.Rm * Vector3f(-eight_in_S2.cos_chihalf, eight_in_S2.sin_chihalf, 0.0f);
+    // unit normal vector of the second geodesic segment (geodesic g2: from south-east to north-west)
+    // orientation of g2 = orientation
+    eight_in_S2.erg2v = eight_in_S2.Rm * Vector3f(eight_in_S2.cos_chihalf, eight_in_S2.sin_chihalf, 0.0f);
+
+    // tangent vectors at the transgression points between the segments in the directions demanded by orientation
+    // in NE quadrant:
+    eight_in_S2.etg1c1v = eight_in_S2.Rm * Vector3f(eight_in_S2.cos_theta_0 * eight_in_S2.sin_chihalf, eight_in_S2.cos_theta_0 * eight_in_S2.cos_chihalf, eight_in_S2.sin_theta_0) * eight_in_S2.orientation;
+    // in SE quadrant:
+    eight_in_S2.etc1g2v = eight_in_S2.Rm * Vector3f(eight_in_S2.cos_theta_0 * eight_in_S2.sin_chihalf, -eight_in_S2.cos_theta_0 * eight_in_S2.cos_chihalf, -eight_in_S2.sin_theta_0) * eight_in_S2.orientation;
+    // in NW quadrant
+    eight_in_S2.etg2c2v = eight_in_S2.Rm * Vector3f(eight_in_S2.cos_theta_0 * eight_in_S2.sin_chihalf, -eight_in_S2.cos_theta_0 * eight_in_S2.cos_chihalf, eight_in_S2.sin_theta_0) * eight_in_S2.orientation;
+    // in SW quadrant
+    eight_in_S2.etc2g1v = eight_in_S2.Rm * Vector3f(eight_in_S2.cos_theta_0 * eight_in_S2.sin_chihalf, eight_in_S2.cos_theta_0 * eight_in_S2.cos_chihalf, -eight_in_S2.sin_theta_0) * eight_in_S2.orientation;
+
+    // tangent vectors at the crossing point
+    eight_in_S2.etg1xv  = eight_in_S2.Rm * Vector3f(eight_in_S2.sin_chihalf, eight_in_S2.cos_chihalf, 0.0f) * eight_in_S2.orientation;
+    eight_in_S2.etg2xv = eight_in_S2.Rm * Vector3f(eight_in_S2.sin_chihalf, -eight_in_S2.cos_chihalf, 0.0f) * eight_in_S2.orientation;
+
+
+     // array of turning circle center vectors labeled by the quadrant number
+     eight_in_S2.centervectors[0] = eight_in_S2.erc1v * eight_in_S2.dist_cm / 100.0f;
+     eight_in_S2.centervectors[1] = eight_in_S2.erc1v * eight_in_S2.dist_cm / 100.0f;
+     eight_in_S2.centervectors[2] = eight_in_S2.erc2v * eight_in_S2.dist_cm / 100.0f;
+     eight_in_S2.centervectors[3] = eight_in_S2.erc2v * eight_in_S2.dist_cm / 100.0f;
+      // array of unit tangent vectors at the transgression points of the segments labeled by the quadrant number
+     eight_in_S2.tangentvectors[0] = eight_in_S2.etg1c1v;
+     eight_in_S2.tangentvectors[1] = eight_in_S2.etc1g2v;
+     eight_in_S2.tangentvectors[2] = eight_in_S2.etc2g1v;
+     eight_in_S2.tangentvectors[3] = eight_in_S2.etg2c2v;
+
+
+     eight_in_S2.in_initial_quadrant = true; // has to be set to true in order to enable segment switching in the initial quadrant
+     eight_in_S2.entered_next_quadrant = true;
+    // set current quadrant to a value that is not 0,1,2,3 such that it is altered in the initialization
+    // eight_in_S2.current_quadrant = 4;
+    //ahrs.get_position(eight_in_S2.aircraft_loc);
+    eight_in_S2.current_quadrant = 3; //eight_in_S2.quadrant(location_3d_diff_NED(eight_in_S2.S2_loc, eight_in_S2.aircraft_loc));
+    eight_in_S2.current_segment = 0; // sets the start segment when eight_sphere is initialized
+                                     // and the entry segment if no segment switching occurs because the aircraft is located in the vicinity of the crossing point defined by _mindistxaplane
+
+    hal.console->println("Initialization of EIGHT-SPHERE completed");
+}
+
 void Plane::do_change_speed(const AP_Mission::Mission_Command& cmd)
 {
     switch (cmd.content.speed.speed_type)
